@@ -11,21 +11,30 @@ settings = get_settings()
 client = Anthropic(api_key=settings.anthropic_api_key)
 
 
-def call_claude(system_prompt: str, user_prompt: str, max_tokens: int = 2000, temperature: float = 0.3) -> str:
-    """Call Claude API and return the text response."""
+def call_claude(system_prompt: str, user_prompt: str, max_tokens: int = 2000,
+                temperature: float = 0.3, model: str | None = None,
+                messages: list[dict] | None = None) -> str:
+    """Call Claude API and return the text response.
+
+    Args:
+        model: Override the default model (e.g. 'claude-3-5-haiku-20241022' for cheaper calls).
+        messages: Full message list (multi-turn). If provided, user_prompt is ignored.
+    """
+    msgs = messages if messages is not None else [{"role": "user", "content": user_prompt}]
     response = client.messages.create(
-        model=settings.claude_model,
+        model=model or settings.claude_model,
         max_tokens=max_tokens,
         temperature=temperature,
         system=system_prompt,
-        messages=[{"role": "user", "content": user_prompt}],
+        messages=msgs,
     )
     return response.content[0].text
 
 
-def call_claude_json(system_prompt: str, user_prompt: str, max_tokens: int = 2000, temperature: float = 0.3) -> dict | list:
+def call_claude_json(system_prompt: str, user_prompt: str, max_tokens: int = 2000,
+                     temperature: float = 0.3, model: str | None = None) -> dict | list:
     """Call Claude API and parse the response as JSON."""
-    raw = call_claude(system_prompt, user_prompt, max_tokens, temperature)
+    raw = call_claude(system_prompt, user_prompt, max_tokens, temperature, model=model)
 
     # Extract JSON from the response (handle markdown code blocks)
     json_match = re.search(r"```(?:json)?\s*([\s\S]*?)```", raw)

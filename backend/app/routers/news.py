@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Article
+from app.models import Article, Signal
 from app.services.ingestion import ingest_all_feeds
 
 router = APIRouter(prefix="/api/news", tags=["news"])
@@ -36,6 +36,7 @@ class IngestResponse(BaseModel):
 def list_articles(
     source: Optional[str] = None,
     processed: Optional[bool] = None,
+    ticker: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
@@ -45,6 +46,10 @@ def list_articles(
         query = query.filter(Article.source == source)
     if processed is not None:
         query = query.filter(Article.processed == processed)
+    if ticker:
+        query = query.join(Signal, Signal.article_id == Article.id).filter(
+            Signal.stock_ticker == ticker.upper()
+        ).distinct()
     return query.offset(skip).limit(limit).all()
 
 

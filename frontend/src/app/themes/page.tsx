@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { api, Theme, Ontology } from "@/lib/api";
 
 export default function ThemesPage() {
@@ -158,9 +159,10 @@ export default function ThemesPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {themes.map((theme) => (
-              <div
+              <Link
                 key={theme.id}
-                className="bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition-colors"
+                href={`/themes/${theme.id}`}
+                className="block bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition-colors"
               >
                 <div className="flex items-start justify-between">
                   <h3 className="font-semibold text-white">{theme.name}</h3>
@@ -184,7 +186,7 @@ export default function ThemesPage() {
                     <span>{new Date(theme.created_at).toLocaleDateString()}</span>
                   )}
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}

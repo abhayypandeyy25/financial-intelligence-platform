@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import SearchBar from "./SearchBar";
 
 const navItems = [
   { href: "/", label: "Dashboard" },
@@ -11,6 +12,7 @@ const navItems = [
   { href: "/sentiment", label: "Sentiment" },
   { href: "/backtest", label: "Back-test" },
   { href: "/themes", label: "Themes" },
+  { href: "/chat", label: "AI Chat" },
 ];
 
 export default function Navbar() {
@@ -29,25 +31,28 @@ export default function Navbar() {
             </span>
             <span className="text-slate-400 text-sm ml-2">TSX Pilot</span>
           </div>
-          <div className="flex space-x-1">
-            {navItems.map((item) => {
-              const isActive =
-                pathname === item.href ||
-                (item.href !== "/" && pathname.startsWith(item.href));
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    isActive
-                      ? "bg-slate-700 text-white"
-                      : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
+          <div className="flex items-center gap-3">
+            <SearchBar />
+            <div className="flex space-x-1">
+              {navItems.map((item) => {
+                const isActive =
+                  pathname === item.href ||
+                  (item.href !== "/" && pathname.startsWith(item.href));
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      isActive
+                        ? "bg-slate-700 text-white"
+                        : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

@@ -160,6 +160,80 @@ export interface SentimentSummary {
   total_comments: number;
 }
 
+// Composite detail types (Phase A)
+export interface StockDetail {
+  ticker: string;
+  company_name: string | null;
+  sector: string | null;
+  exchange: string | null;
+  quote: StockQuote | null;
+  signals: Signal[];
+  sentiment_summary: SentimentSummary | null;
+  recent_sentiment: SentimentPost[];
+  backtest_results: BacktestResult[];
+  related_articles: Article[];
+}
+
+export interface SignalDetail extends Signal {
+  article: Article | null;
+  stock_quote: StockQuote | null;
+  backtest: BacktestResult | null;
+  related_signals: Signal[];
+}
+
+export interface ThemeDetail extends Theme {
+  articles: Article[];
+  related_signals: Signal[];
+}
+
+export interface SearchResults {
+  stocks: Top100Stock[];
+  signals: Signal[];
+  articles: Article[];
+  themes: Theme[];
+  query: string;
+}
+
+// Chat types (Phase B)
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  references: Array<{ type: string; id?: number; ticker?: string }>;
+}
+
+export interface ChatResponse {
+  response: string;
+  references: Array<{ type: string; id?: number; ticker?: string }>;
+  suggested_queries: string[];
+}
+
+// Enhanced dashboard types (Phase C)
+export interface SectorHeatmapEntry {
+  sector: string;
+  signal_count: number;
+  avg_sentiment_score: number;
+  avg_price_change: number | null;
+  top_ticker: string | null;
+  accuracy: number | null;
+}
+
+export interface PipelineStats {
+  total_sources: number;
+  articles_ingested_today: number;
+  articles_processed_today: number;
+  signals_generated_today: number;
+  backtests_run_today: number;
+  sentiment_posts_today: number;
+  last_ingestion_time: string | null;
+}
+
+export interface EnhancedDashboard extends DashboardSummary {
+  overall_sentiment_trend: string;
+  sentiment_change_vs_yesterday: number | null;
+  sector_heatmap: SectorHeatmapEntry[];
+  pipeline_stats: PipelineStats;
+}
+
 // API functions
 export const api = {
   // Dashboard
@@ -236,4 +310,38 @@ export const api = {
     fetchAPI<SentimentSummary>(`/api/sentiment/summary/${ticker}${days ? `?days=${days}` : ""}`),
   refreshSentiment: () =>
     fetchAPI<{ scraped: number; sources: string[] }>("/api/sentiment/refresh", { method: "POST" }),
+
+  // Stock Detail (composite)
+  getStockDetail: (ticker: string) =>
+    fetchAPI<StockDetail>(`/api/stocks/${encodeURIComponent(ticker)}/detail`),
+
+  // Signal Detail (composite)
+  getSignalDetail: (id: number) =>
+    fetchAPI<SignalDetail>(`/api/signals/${id}/detail`),
+
+  // Theme Detail (with articles)
+  getThemeDetail: (id: number) =>
+    fetchAPI<ThemeDetail>(`/api/themes/${id}`),
+
+  // Global Search
+  search: (q: string, limit?: number) => {
+    const params = new URLSearchParams({ q });
+    if (limit) params.set("limit", String(limit));
+    return fetchAPI<SearchResults>(`/api/search?${params.toString()}`);
+  },
+
+  // Chat
+  chat: (message: string, conversationHistory: ChatMessage[]) =>
+    fetchAPI<ChatResponse>("/api/chat", {
+      method: "POST",
+      body: JSON.stringify({ message, conversation_history: conversationHistory }),
+    }),
+  getChatSuggestions: () =>
+    fetchAPI<string[]>("/api/chat/suggestions"),
+
+  // Enhanced Dashboard
+  getEnhancedDashboard: () =>
+    fetchAPI<EnhancedDashboard>("/api/dashboard/enhanced"),
+  getMarketNarrative: () =>
+    fetchAPI<{ narrative: string }>("/api/dashboard/narrative"),
 };

@@ -7,8 +7,10 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from fastapi import HTTPException
+
 from app.database import get_db
-from app.models import Article, Theme, theme_articles
+from app.models import Article, Signal, Theme, theme_articles
 from app.agents.theme import detect_themes
 from app.config import get_settings
 
@@ -53,6 +55,62 @@ def list_themes(
         r.article_count = len(t.articles)
         results.append(r)
     return results
+
+
+class ArticleBrief(BaseModel):
+    id: int
+    title: str
+    summary: Optional[str]
+    source: str
+    url: str
+    published_at: Optional[datetime]
+    processed: bool
+    model_config = {"from_attributes": True}
+
+
+class SignalBrief(BaseModel):
+    id: int
+    stock_ticker: str
+    stock_name: Optional[str]
+    sentiment: str
+    confidence: float
+    direction: Optional[str]
+    reasoning: Optional[str]
+    created_at: Optional[datetime]
+    model_config = {"from_attributes": True}
+
+
+class ThemeDetailResponse(ThemeResponse):
+    articles: List[ArticleBrief] = []
+    related_signals: List[SignalBrief] = []
+
+
+@router.get("/{theme_id}", response_model=ThemeDetailResponse)
+def get_theme_detail(theme_id: int, db: Session = Depends(get_db)):
+    """Get theme with its contributing articles and related signals."""
+    theme = db.query(Theme).filter(Theme.id == theme_id).first()
+    if not theme:
+        raise HTTPException(status_code=404, detail="Theme not found")
+
+    r = ThemeDetailResponse.model_validate(theme)
+    r.article_count = len(theme.articles)
+
+    # Contributing articles
+    r.articles = [ArticleBrief.model_validate(a) for a in theme.articles]
+
+    # Signals from those articles
+    article_ids = [a.id for a in theme.articles]
+    if article_ids:
+        signals = (
+            db.query(Signal)
+            .filter(Signal.article_id.in_(article_ids))
+            .order_by(Signal.confidence.desc())
+            .limit(20)
+            .all()
+        )
+        r.related_signals = [SignalBrief.model_validate(s) for s in signals]
+
+    return r
 
 
 @router.get("/ontology", response_model=OntologyResponse)

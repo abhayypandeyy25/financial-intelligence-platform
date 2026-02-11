@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { api, Top100Stock, StockQuote } from "@/lib/api";
 import StatCard from "@/components/StatCard";
 
@@ -14,6 +15,7 @@ const SECTOR_COLORS: Record<string, string> = {
 };
 
 export default function StocksPage() {
+  const router = useRouter();
   const [stocks, setStocks] = useState<Top100Stock[]>([]);
   const [quotes, setQuotes] = useState<Record<string, StockQuote>>({});
   const [loading, setLoading] = useState(true);
@@ -211,7 +213,8 @@ export default function StocksPage() {
                 return (
                   <tr
                     key={stock.ticker}
-                    className="border-b border-slate-800/50 hover:bg-slate-800/50 transition-colors"
+                    onClick={() => router.push(`/stocks/${stock.ticker}`)}
+                    className="border-b border-slate-800/50 hover:bg-slate-800/50 transition-colors cursor-pointer"
                   >
                     <td className="px-4 py-3 text-sm text-slate-500">
                       {stock.market_cap_rank}

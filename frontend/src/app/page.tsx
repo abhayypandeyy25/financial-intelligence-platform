@@ -1,8 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api, DashboardSummary, StockQuote, SentimentPost } from "@/lib/api";
+import Link from "next/link";
+import { api, EnhancedDashboard, StockQuote, SentimentPost } from "@/lib/api";
 import StatCard from "@/components/StatCard";
+import MarketNarrative from "@/components/MarketNarrative";
+import SectorHeatmap from "@/components/SectorHeatmap";
+import PipelineFlow from "@/components/PipelineFlow";
+import TickerLink from "@/components/TickerLink";
 import {
   BarChart,
   Bar,
@@ -22,8 +27,15 @@ const SENTIMENT_COLORS: Record<string, string> = {
   neutral: "#f59e0b",
 };
 
+const TREND_LABELS: Record<string, { text: string; color: string }> = {
+  bullish: { text: "Bullish", color: "text-emerald-400" },
+  bearish: { text: "Bearish", color: "text-red-400" },
+  mixed: { text: "Mixed", color: "text-amber-400" },
+  neutral: { text: "Neutral", color: "text-slate-400" },
+};
+
 export default function DashboardPage() {
-  const [data, setData] = useState<DashboardSummary | null>(null);
+  const [data, setData] = useState<EnhancedDashboard | null>(null);
   const [topMovers, setTopMovers] = useState<StockQuote[]>([]);
   const [recentPosts, setRecentPosts] = useState<SentimentPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,13 +43,36 @@ export default function DashboardPage() {
 
   useEffect(() => {
     Promise.all([
-      api.getDashboard(),
+      api.getEnhancedDashboard().catch(() => null),
       api.getStockQuotes({ limit: 100 }).catch(() => [] as StockQuote[]),
       api.getSentiment({ days: 3, limit: 5 }).catch(() => [] as SentimentPost[]),
     ])
       .then(([dashData, quotes, posts]) => {
-        setData(dashData);
-        // Sort by absolute percent change to get top movers
+        if (!dashData) {
+          // Fallback to basic dashboard if enhanced fails
+          api
+            .getDashboard()
+            .then((basic) => {
+              setData({
+                ...basic,
+                overall_sentiment_trend: "neutral",
+                sentiment_change_vs_yesterday: null,
+                sector_heatmap: [],
+                pipeline_stats: {
+                  total_sources: 0,
+                  articles_ingested_today: 0,
+                  articles_processed_today: 0,
+                  signals_generated_today: 0,
+                  backtests_run_today: 0,
+                  sentiment_posts_today: 0,
+                  last_ingestion_time: null,
+                },
+              } as EnhancedDashboard);
+            })
+            .catch((e) => setError(e.message));
+        } else {
+          setData(dashData);
+        }
         const sorted = [...quotes]
           .filter((q) => q.percent_change != null)
           .sort((a, b) => Math.abs(b.percent_change || 0) - Math.abs(a.percent_change || 0));
@@ -70,6 +105,8 @@ export default function DashboardPage() {
 
   if (!data) return null;
 
+  const trend = TREND_LABELS[data.overall_sentiment_trend] || TREND_LABELS.neutral;
+
   const sentimentData = Object.entries(data.signals_by_sentiment).map(([name, value]) => ({
     name,
     value,
@@ -85,14 +122,22 @@ export default function DashboardPage() {
       <div>
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <p className="text-slate-400 text-sm mt-1">
-          Financial Intelligence Platform - Canadian Market (TSX) Pilot
+          Financial Intelligence Platform — Canadian Market (TSX) Pilot
         </p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* 1. AI Market Narrative */}
+      <MarketNarrative />
+
+      {/* 2. Market Pulse Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <StatCard title="Total Articles" value={data.total_articles} color="blue" />
-        <StatCard title="Total Signals" value={data.total_signals} subtitle={`${data.signals_today} today`} color="emerald" />
+        <StatCard
+          title="Total Signals"
+          value={data.total_signals}
+          subtitle={`${data.signals_today} today`}
+          color="emerald"
+        />
         <StatCard
           title="1-Day Accuracy"
           value={data.accuracy_1d ? `${data.accuracy_1d}%` : "N/A"}
@@ -103,26 +148,56 @@ export default function DashboardPage() {
           value={data.accuracy_7d ? `${data.accuracy_7d}%` : "N/A"}
           color="purple"
         />
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-center items-center">
+          <div className="text-xs text-slate-500 mb-1">Market Sentiment</div>
+          <div className={`text-xl font-bold ${trend.color}`}>{trend.text}</div>
+          {data.sentiment_change_vs_yesterday != null && (
+            <div
+              className={`text-xs mt-1 ${
+                data.sentiment_change_vs_yesterday >= 0 ? "text-emerald-400" : "text-red-400"
+              }`}
+            >
+              {data.sentiment_change_vs_yesterday >= 0 ? "+" : ""}
+              {data.sentiment_change_vs_yesterday}% vs yesterday
+            </div>
+          )}
+        </div>
       </div>
 
+      {/* 3. Sector Heatmap */}
+      <SectorHeatmap sectors={data.sector_heatmap} />
+
+      {/* 4. Pipeline Flow */}
+      <PipelineFlow
+        stats={data.pipeline_stats}
+        totalArticles={data.total_articles}
+        totalSignals={data.total_signals}
+        totalBacktests={data.total_backtests}
+      />
+
+      {/* 5. Top Signals + Sentiment Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Latest Signals */}
+        {/* Latest Signals with cross-links */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-          <h2 className="text-lg font-semibold mb-4">Latest Signals</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Top Signals</h2>
+            <Link href="/signals" className="text-xs text-emerald-400 hover:text-emerald-300">
+              View all →
+            </Link>
+          </div>
           {data.latest_signals.length === 0 ? (
             <p className="text-slate-500 text-sm">No signals yet. Run the seed script or trigger ingestion.</p>
           ) : (
             <div className="space-y-3">
               {data.latest_signals.map((signal: any) => (
-                <div
+                <Link
                   key={signal.id}
-                  className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg"
+                  href={`/signals/${signal.id}`}
+                  className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg hover:bg-slate-800 transition-colors block"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-sm font-semibold text-emerald-400">
-                        {signal.ticker}
-                      </span>
+                      <TickerLink ticker={signal.ticker} size="sm" />
                       <span
                         className={`text-xs px-2 py-0.5 rounded-full ${
                           signal.direction === "up"
@@ -154,7 +229,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="text-xs text-slate-500">confidence</div>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}
@@ -191,7 +266,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Signals by Sector */}
+      {/* 6. Signals by Sector */}
       {sectorData.length > 0 && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
           <h2 className="text-lg font-semibold mb-4">Signals by Sector</h2>
@@ -213,24 +288,28 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Market Overview + Community Buzz */}
+      {/* 7. Top Movers + Community Buzz */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Movers */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-          <h2 className="text-lg font-semibold mb-4">Top Movers</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Top Movers</h2>
+            <Link href="/stocks" className="text-xs text-emerald-400 hover:text-emerald-300">
+              View all →
+            </Link>
+          </div>
           {topMovers.length === 0 ? (
             <p className="text-slate-500 text-sm">No stock quote data yet. Go to Stocks page and click Refresh Quotes.</p>
           ) : (
             <div className="space-y-2">
               {topMovers.map((q) => (
-                <div
+                <Link
                   key={q.ticker}
-                  className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg"
+                  href={`/stocks/${q.ticker}`}
+                  className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg hover:bg-slate-800 transition-colors block"
                 >
                   <div>
-                    <span className="font-mono text-sm font-semibold text-emerald-400">
-                      {q.ticker.replace(".TO", "")}
-                    </span>
+                    <TickerLink ticker={q.ticker} size="sm" />
                     <span className="text-xs text-slate-500 ml-2">
                       {q.company_name}
                     </span>
@@ -248,7 +327,7 @@ export default function DashboardPage() {
                       {q.percent_change?.toFixed(2)}%
                     </div>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}
@@ -256,7 +335,12 @@ export default function DashboardPage() {
 
         {/* Community Buzz */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-          <h2 className="text-lg font-semibold mb-4">Community Buzz</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Community Buzz</h2>
+            <Link href="/sentiment" className="text-xs text-emerald-400 hover:text-emerald-300">
+              View all →
+            </Link>
+          </div>
           {recentPosts.length === 0 ? (
             <p className="text-slate-500 text-sm">No sentiment data yet. Go to Sentiment page and click Scrape Reddit.</p>
           ) : (

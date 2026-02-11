@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { api, Signal } from "@/lib/api";
+import TickerLink from "@/components/TickerLink";
 
 const SECTORS = ["All", "Energy", "Mining", "Finance", "Technology", "Healthcare"];
 const SENTIMENTS = ["All", "positive", "negative", "neutral"];
@@ -114,16 +116,15 @@ export default function SignalsPage() {
       ) : (
         <div className="space-y-3">
           {signals.map((signal) => (
-            <div
+            <Link
               key={signal.id}
-              className="bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition-colors"
+              href={`/signals/${signal.id}`}
+              className="block bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition-colors"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-lg font-bold text-white">
-                      {signal.stock_ticker}
-                    </span>
+                    <TickerLink ticker={signal.stock_ticker} showSuffix size="md" />
                     {signal.stock_name && (
                       <span className="text-slate-400 text-sm">{signal.stock_name}</span>
                     )}
@@ -187,7 +188,7 @@ export default function SignalsPage() {
                   <div className="text-xs text-slate-500">confidence</div>
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}
