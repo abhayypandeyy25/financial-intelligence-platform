@@ -9,6 +9,12 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./fip.db"
     claude_model: str = "claude-sonnet-4-20250514"
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # Render gives postgres:// but SQLAlchemy needs postgresql://
+        if self.database_url.startswith("postgres://"):
+            object.__setattr__(self, "database_url", self.database_url.replace("postgres://", "postgresql://", 1))
+
     # RSS feed sources for Canadian financial news
     rss_feeds: dict[str, str] = {
         "Financial Post": "https://financialpost.com/feed",
