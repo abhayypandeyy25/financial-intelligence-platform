@@ -140,3 +140,26 @@ def init_stock_universe(db: Session = Depends(get_db)):
     scraper = YFinanceStockScraper()
     stocks = scraper.update_top_100_universe(db)
     return {"populated": len(stocks)}
+
+
+@router.get("/debug-yfinance")
+def debug_yfinance():
+    """Debug endpoint to test yfinance on this server."""
+    import yfinance as yf
+    result = {"yfinance_version": yf.__version__, "tests": []}
+
+    test_ticker = "RY.TO"
+    try:
+        stock = yf.Ticker(test_ticker)
+        hist = stock.history(period="5d")
+        result["tests"].append({
+            "ticker": test_ticker,
+            "rows": len(hist),
+            "columns": list(hist.columns),
+            "empty": hist.empty,
+            "latest_close": float(hist.iloc[-1]["Close"]) if not hist.empty else None,
+        })
+    except Exception as e:
+        result["tests"].append({"ticker": test_ticker, "error": str(e)})
+
+    return result
