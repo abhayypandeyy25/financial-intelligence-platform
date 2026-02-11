@@ -116,10 +116,14 @@ def refresh_stock_quotes(
     tickers: Optional[List[str]] = None,
     db: Session = Depends(get_db),
 ):
-    """Manually trigger stock quote refresh."""
+    """Manually trigger stock quote refresh. Also populates Top 100 if empty."""
     from app.services.scrapers.stock_scrapers import YFinanceStockScraper
 
     scraper = YFinanceStockScraper()
+
+    # Ensure Top 100 universe is populated
+    if db.query(Top100Stock).count() == 0:
+        scraper.update_top_100_universe(db)
 
     if tickers:
         quotes = scraper.fetch_quotes_batch(tickers, db=db)
@@ -127,3 +131,12 @@ def refresh_stock_quotes(
         quotes = scraper.fetch_top_tsx_quotes(db=db)
 
     return {"refreshed": len(quotes), "tickers": [q.ticker for q in quotes]}
+
+
+@router.post("/init-universe")
+def init_stock_universe(db: Session = Depends(get_db)):
+    """Populate the Top 100 stock universe from config (no yfinance needed)."""
+    from app.services.scrapers.stock_scrapers import YFinanceStockScraper
+    scraper = YFinanceStockScraper()
+    stocks = scraper.update_top_100_universe(db)
+    return {"populated": len(stocks)}

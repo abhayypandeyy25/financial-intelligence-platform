@@ -46,6 +46,27 @@ app.include_router(chat.router)
 @app.on_event("startup")
 def startup():
     init_db()
+
+    # Populate Top 100 stock universe + initial quote fetch if empty
+    from app.database import get_db
+    db = next(get_db())
+    try:
+        from app.models import Top100Stock, StockQuote
+        if db.query(Top100Stock).count() == 0:
+            from app.services.scrapers.stock_scrapers import YFinanceStockScraper
+            scraper = YFinanceStockScraper()
+            scraper.update_top_100_universe(db)
+            print("Startup: Populated Top 100 stock universe")
+        if db.query(StockQuote).count() == 0:
+            from app.services.scrapers.stock_scrapers import YFinanceStockScraper
+            scraper = YFinanceStockScraper()
+            scraper.fetch_top_tsx_quotes(db=db)
+            print("Startup: Fetched initial stock quotes")
+    except Exception as e:
+        print(f"Startup stock init warning: {e}")
+    finally:
+        db.close()
+
     # Start background scheduler for periodic ingestion
     from app.services.scheduler import start_scheduler
     start_scheduler()
