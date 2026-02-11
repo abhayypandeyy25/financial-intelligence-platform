@@ -143,6 +143,18 @@ class Settings(BaseSettings):
     reddit_client_secret: str = ""
     reddit_user_agent: str = "FinancialIntelligencePlatform/1.0"
 
+    # Twitter/X API credentials
+    twitter_bearer_token: str = ""
+    twitter_accounts: list[str] = [
+        "BNNBloomberg", "GlobeInvestor", "FinancialPost",
+        "CBCBusiness", "tsx_tsxv", "YahooFinanceCA",
+        "BankOfCanada", "RBCCapitalMkts",
+    ]
+    twitter_search_keywords: list[str] = [
+        "TSX", "$TSX", "Canadian stocks", "Bank of Canada",
+        "TSX Composite", "Canadian dollar", "oil sands Alberta",
+    ]
+
     # Top 100 selection criteria
     top_100_criteria: str = "market_cap"
     top_100_refresh_hours: int = 24

@@ -229,3 +229,253 @@ class RedditScraper:
             posts = self.scrape_with_praw(subreddit, limit=limit, db=db)
             all_posts.extend(posts)
         return all_posts
+
+
+class TwitterScraper:
+    """
+    Twitter/X scraper for Canadian financial news and market sentiment.
+    Uses tweepy with Twitter API v2 (Bearer Token auth).
+    Gracefully returns empty results if bearer token is not configured.
+    """
+
+    source_name = "Twitter"
+    source_type = "social"
+
+    TICKER_PATTERN = re.compile(
+        r"\b(?:(?:\$)?([A-Z]{1,5}(?:\.[A-Z]{1,2})?)(?:\.TO)?)\b"
+    )
+
+    def __init__(self):
+        settings = get_settings()
+        self.bearer_token = settings.twitter_bearer_token
+        self.accounts = settings.twitter_accounts
+        self.keywords = settings.twitter_search_keywords
+        self._client = None
+
+    @staticmethod
+    def hash_url(url: str) -> str:
+        return hashlib.sha256(url.encode()).hexdigest()
+
+    def _get_client(self):
+        """Lazy-init tweepy client. Returns None if no bearer token."""
+        if self._client is not None:
+            return self._client
+        if not self.bearer_token:
+            return None
+        try:
+            import tweepy
+            self._client = tweepy.Client(bearer_token=self.bearer_token, wait_on_rate_limit=True)
+            return self._client
+        except Exception as e:
+            print(f"Twitter: Failed to initialise client: {e}")
+            return None
+
+    def _extract_tickers(self, text: str) -> List[str]:
+        """Extract stock ticker symbols from text."""
+        settings = get_settings()
+        known_tickers = set(settings.tsx_stocks.keys())
+        known_base = {t.replace(".TO", "") for t in known_tickers}
+
+        found = set()
+        for match in self.TICKER_PATTERN.finditer(text):
+            symbol = match.group(1)
+            if symbol in known_base:
+                found.add(f"{symbol}.TO")
+            elif f"{symbol}.TO" in known_tickers:
+                found.add(f"{symbol}.TO")
+            elif symbol in known_tickers:
+                found.add(symbol)
+        return list(found)
+
+    def search_recent(self, query: str, limit: int = 20,
+                      db: Optional[Session] = None) -> List[SentimentData]:
+        """Search recent tweets using Twitter API v2."""
+        client = self._get_client()
+        if not client:
+            return []
+
+        import tweepy
+
+        posts = []
+        try:
+            # Twitter API v2 recent search (last 7 days)
+            response = client.search_recent_tweets(
+                query=f"{query} -is:retweet lang:en",
+                max_results=min(limit, 100),
+                tweet_fields=["created_at", "public_metrics", "author_id"],
+                user_fields=["username"],
+                expansions=["author_id"],
+            )
+
+            if not response.data:
+                return posts
+
+            # Build author lookup
+            users = {}
+            if response.includes and "users" in response.includes:
+                for user in response.includes["users"]:
+                    users[user.id] = user.username
+
+            for tweet in response.data:
+                author = users.get(tweet.author_id, "unknown")
+                tweet_url = f"https://twitter.com/{author}/status/{tweet.id}"
+                url_hash = self.hash_url(tweet_url)
+
+                # Dedup
+                if db:
+                    existing = db.query(SentimentData).filter(
+                        SentimentData.url_hash == url_hash
+                    ).first()
+                    if existing:
+                        continue
+
+                content = tweet.text or ""
+                if len(content) < 10:
+                    continue
+
+                tickers = self._extract_tickers(content)
+                metrics = tweet.public_metrics or {}
+
+                sentiment_item = SentimentData(
+                    source=f"Twitter @{author}",
+                    source_type=self.source_type,
+                    content=content[:5000],
+                    author=author,
+                    url=tweet_url,
+                    url_hash=url_hash,
+                    posted_at=tweet.created_at,
+                    ingested_at=datetime.utcnow(),
+                    upvotes=metrics.get("like_count", 0),
+                    comments_count=metrics.get("reply_count", 0),
+                    tickers_mentioned=json.dumps(tickers) if tickers else None,
+                    processed=False,
+                )
+                posts.append(sentiment_item)
+                if db:
+                    db.add(sentiment_item)
+
+            if db:
+                db.commit()
+
+        except tweepy.errors.TooManyRequests:
+            print("Twitter: Rate limit hit, returning partial results")
+        except Exception as e:
+            print(f"Twitter: Search error for '{query}': {e}")
+            if db:
+                db.rollback()
+
+        return posts
+
+    def scrape_accounts(self, limit: int = 10,
+                        db: Optional[Session] = None) -> List[SentimentData]:
+        """Fetch recent tweets from tracked financial accounts."""
+        client = self._get_client()
+        if not client:
+            return []
+
+        import tweepy
+
+        all_posts = []
+        for handle in self.accounts:
+            try:
+                # Look up user by username
+                user_resp = client.get_user(username=handle)
+                if not user_resp.data:
+                    print(f"Twitter: User @{handle} not found")
+                    continue
+
+                user_id = user_resp.data.id
+
+                # Get recent tweets from this user
+                response = client.get_users_tweets(
+                    id=user_id,
+                    max_results=min(limit, 100),
+                    tweet_fields=["created_at", "public_metrics"],
+                    exclude=["retweets", "replies"],
+                )
+
+                if not response.data:
+                    continue
+
+                for tweet in response.data:
+                    tweet_url = f"https://twitter.com/{handle}/status/{tweet.id}"
+                    url_hash = self.hash_url(tweet_url)
+
+                    if db:
+                        existing = db.query(SentimentData).filter(
+                            SentimentData.url_hash == url_hash
+                        ).first()
+                        if existing:
+                            continue
+
+                    content = tweet.text or ""
+                    if len(content) < 10:
+                        continue
+
+                    tickers = self._extract_tickers(content)
+                    metrics = tweet.public_metrics or {}
+
+                    sentiment_item = SentimentData(
+                        source=f"Twitter @{handle}",
+                        source_type=self.source_type,
+                        content=content[:5000],
+                        author=handle,
+                        url=tweet_url,
+                        url_hash=url_hash,
+                        posted_at=tweet.created_at,
+                        ingested_at=datetime.utcnow(),
+                        upvotes=metrics.get("like_count", 0),
+                        comments_count=metrics.get("reply_count", 0),
+                        tickers_mentioned=json.dumps(tickers) if tickers else None,
+                        processed=False,
+                    )
+                    all_posts.append(sentiment_item)
+                    if db:
+                        db.add(sentiment_item)
+
+                if db:
+                    db.commit()
+
+                print(f"  Twitter @{handle}: fetched tweets")
+
+            except tweepy.errors.TooManyRequests:
+                print(f"Twitter: Rate limit hit on @{handle}, stopping account scrape")
+                break
+            except Exception as e:
+                print(f"Twitter: Error fetching @{handle}: {e}")
+                if db:
+                    db.rollback()
+
+        return all_posts
+
+    def scrape_all(self, limit: int = 25,
+                   db: Optional[Session] = None) -> List[SentimentData]:
+        """
+        Scrape all Twitter sources: keyword search + tracked accounts.
+        Returns combined, deduplicated results.
+        """
+        if not self.bearer_token:
+            print("Twitter: No bearer token configured, skipping")
+            return []
+
+        print("Scraping Twitter/X...")
+        all_posts = []
+        seen_hashes = set()
+
+        # 1. Keyword search (use top 3 keywords to stay within rate limits)
+        for keyword in self.keywords[:3]:
+            posts = self.search_recent(keyword, limit=limit, db=db)
+            for p in posts:
+                if p.url_hash not in seen_hashes:
+                    all_posts.append(p)
+                    seen_hashes.add(p.url_hash)
+
+        # 2. Tracked accounts
+        account_posts = self.scrape_accounts(limit=10, db=db)
+        for p in account_posts:
+            if p.url_hash not in seen_hashes:
+                all_posts.append(p)
+                seen_hashes.add(p.url_hash)
+
+        print(f"  Twitter total: {len(all_posts)} posts scraped")
+        return all_posts

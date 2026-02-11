@@ -17,7 +17,7 @@ from app.services.scrapers.news_scrapers import (
     YahooFinanceCanadaScraper,
 )
 from app.services.scrapers.stock_scrapers import YFinanceStockScraper
-from app.services.scrapers.sentiment_scrapers import RedditScraper
+from app.services.scrapers.sentiment_scrapers import RedditScraper, TwitterScraper
 
 
 class IngestionOrchestrator:
@@ -41,6 +41,7 @@ class IngestionOrchestrator:
         ]
         self.stock_scraper = YFinanceStockScraper()
         self.sentiment_scraper = RedditScraper()
+        self.twitter_scraper = TwitterScraper()
 
     def ingest_all_news(self, db: Session, limit_per_source: int = 20) -> Dict[str, int]:
         """Scrape all news sources and save to database."""
@@ -88,15 +89,21 @@ class IngestionOrchestrator:
         return len(quotes)
 
     def ingest_sentiment(self, db: Session, limit: int = 25) -> int:
-        """Scrape Reddit sentiment data."""
+        """Scrape Reddit and Twitter sentiment data."""
         print(f"\n{'='*60}")
         print(f"SENTIMENT INGESTION - {datetime.utcnow().isoformat()}")
         print(f"{'='*60}\n")
 
-        posts = self.sentiment_scraper.scrape_all(limit=limit, db=db)
+        # Reddit
+        reddit_posts = self.sentiment_scraper.scrape_all(limit=limit, db=db)
 
-        print(f"Sentiment ingestion complete: {len(posts)} posts scraped")
-        return len(posts)
+        # Twitter/X
+        twitter_posts = self.twitter_scraper.scrape_all(limit=limit, db=db)
+
+        total = len(reddit_posts) + len(twitter_posts)
+        print(f"Sentiment ingestion complete: {total} posts "
+              f"({len(reddit_posts)} Reddit, {len(twitter_posts)} Twitter)")
+        return total
 
     def run_full_ingestion(self, db: Session) -> Dict[str, any]:
         """Run complete data ingestion pipeline."""

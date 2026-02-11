@@ -115,20 +115,28 @@ def refresh_sentiment_data(
     limit: int = Query(25, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
-    """Manually trigger sentiment data scraping."""
-    from app.services.scrapers.sentiment_scrapers import RedditScraper
+    """Manually trigger sentiment data scraping (Reddit + Twitter)."""
+    from app.services.scrapers.sentiment_scrapers import RedditScraper, TwitterScraper
 
-    scraper = RedditScraper()
+    all_posts = []
 
+    # Reddit
+    reddit_scraper = RedditScraper()
     if subreddits:
-        all_posts = []
         for sub in subreddits:
-            posts = scraper.scrape_subreddit_json(sub, limit=limit, db=db)
+            posts = reddit_scraper.scrape_subreddit_json(sub, limit=limit, db=db)
             all_posts.extend(posts)
     else:
-        all_posts = scraper.scrape_all(limit=limit, db=db)
+        all_posts.extend(reddit_scraper.scrape_all(limit=limit, db=db))
+
+    # Twitter/X
+    twitter_scraper = TwitterScraper()
+    twitter_posts = twitter_scraper.scrape_all(limit=limit, db=db)
+    all_posts.extend(twitter_posts)
 
     return {
         "scraped": len(all_posts),
+        "reddit": len(all_posts) - len(twitter_posts),
+        "twitter": len(twitter_posts),
         "sources": list(set(p.source for p in all_posts)),
     }
