@@ -55,7 +55,7 @@ def classify_intent(query: str) -> dict:
             INTENT_PROMPT.format(query=query),
             max_tokens=300,
             temperature=0.1,
-            model="claude-3-5-haiku-20241022",
+            model="claude-haiku-4-5-20251001",
         )
         # Parse JSON from response
         import re

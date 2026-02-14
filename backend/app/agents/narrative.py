@@ -136,7 +136,7 @@ def generate_narrative(db: Session) -> str:
             prompt,
             max_tokens=300,
             temperature=0.5,
-            model="claude-3-5-haiku-20241022",
+            model="claude-haiku-4-5-20251001",
         )
         _set_cached("narrative", narrative)
         return narrative

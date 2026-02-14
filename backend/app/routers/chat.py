@@ -38,13 +38,20 @@ def chat_endpoint(request: ChatRequest, db: Session = Depends(get_db)):
 
     history = [{"role": m.role, "content": m.content} for m in request.conversation_history]
 
-    result = chat(request.message, history, db)
-
-    return ChatResponse(
-        response=result["response"],
-        references=result["references"],
-        suggested_queries=result["suggested_queries"],
-    )
+    try:
+        result = chat(request.message, history, db)
+        return ChatResponse(
+            response=result["response"],
+            references=result["references"],
+            suggested_queries=result["suggested_queries"],
+        )
+    except Exception as e:
+        print(f"Chat error: {e}")
+        return ChatResponse(
+            response=f"I encountered an error processing your request: {str(e)}. Please try again.",
+            references=[],
+            suggested_queries=["What are the top bullish signals this week?"],
+        )
 
 
 @router.get("/suggestions", response_model=list[str])
