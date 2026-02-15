@@ -10,18 +10,36 @@ const steps: { id: Step; label: string }[] = [
   { id: 4, label: "Insights" },
 ];
 
+// Map back hrefs to their pipeline step so we avoid redirect pages
+const BACK_STEP_MAP: Record<string, Step> = {
+  "/": 1,
+  "/signals": 3,
+  "/stocks": 4,
+  "/themes": 3,
+  "/sources": 1,
+};
+
 interface DetailNavProps {
   backLabel: string;
-  backHref: string;
+  backStep?: Step;
 }
 
-export default function DetailNav({ backLabel, backHref }: DetailNavProps) {
+export default function DetailNav({ backLabel, backStep }: DetailNavProps) {
   const router = useRouter();
   const { setActiveStep } = useStep();
 
   const navigateToStep = (step: Step) => {
     setActiveStep(step);
     router.push("/");
+  };
+
+  const handleBack = () => {
+    if (backStep) {
+      setActiveStep(backStep);
+      router.push("/");
+    } else {
+      router.back();
+    }
   };
 
   return (
@@ -42,7 +60,7 @@ export default function DetailNav({ backLabel, backHref }: DetailNavProps) {
         ))}
       </div>
       <button
-        onClick={() => router.push(backHref)}
+        onClick={handleBack}
         className="text-sm text-gray-500 hover:text-emerald-600 transition-colors"
       >
         &larr; {backLabel}

@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { api, SignalDetail } from "@/lib/api";
+import { useStep } from "@/context/StepContext";
 import TickerLink from "@/components/TickerLink";
 import DetailNav from "@/components/DetailNav";
 
@@ -15,6 +16,8 @@ const SENTIMENT_COLORS: Record<string, string> = {
 
 export default function SignalDetailPage() {
   const params = useParams();
+  const router = useRouter();
+  const { setActiveStep } = useStep();
   const signalId = Number(params.id);
   const [data, setData] = useState<SignalDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,11 +41,14 @@ export default function SignalDetailPage() {
 
   if (error || !data) {
     return (
-      <div className="text-center py-12">
+      <div className="p-6 text-center py-12">
         <p className="text-red-600">{error || "Signal not found"}</p>
-        <Link href="/signals" className="text-emerald-600 hover:underline mt-2 inline-block text-sm">
+        <button
+          onClick={() => { setActiveStep(3); router.push("/"); }}
+          className="text-emerald-600 hover:underline mt-2 inline-block text-sm"
+        >
           Back to Signals
-        </Link>
+        </button>
       </div>
     );
   }
@@ -50,7 +56,7 @@ export default function SignalDetailPage() {
   return (
     <div className="p-6 space-y-6 max-w-4xl pb-24 lg:pb-6">
       {/* Navigation */}
-      <DetailNav backLabel="Back to Signals" backHref="/signals" />
+      <DetailNav backLabel="Back to Signals" backStep={3} />
 
       {/* Header */}
       <div>

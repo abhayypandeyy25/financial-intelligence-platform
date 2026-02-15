@@ -88,7 +88,7 @@ export default function SectorDetailPage() {
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6 pb-24 lg:pb-6">
       {/* Navigation */}
-      <DetailNav backLabel="Back to Insights" backHref="/stocks" />
+      <DetailNav backLabel="Back to Insights" backStep={4} />
 
       {/* Header */}
       <div>

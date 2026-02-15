@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { api, StockDetail } from "@/lib/api";
+import { useStep } from "@/context/StepContext";
 import StatCard from "@/components/StatCard";
 import TickerLink from "@/components/TickerLink";
 import DetailNav from "@/components/DetailNav";
@@ -25,6 +26,8 @@ const SENTIMENT_COLORS: Record<string, string> = {
 
 export default function StockDetailPage() {
   const params = useParams();
+  const router = useRouter();
+  const { setActiveStep } = useStep();
   const ticker = decodeURIComponent(params.ticker as string);
   const [data, setData] = useState<StockDetail | null>(null);
   const [history, setHistory] = useState<Array<{ date: string; price: number }>>([]);
@@ -69,11 +72,14 @@ export default function StockDetailPage() {
 
   if (error || !data) {
     return (
-      <div className="text-center py-12">
+      <div className="p-6 text-center py-12">
         <p className="text-red-600">{error || "Stock not found"}</p>
-        <Link href="/stocks" className="text-emerald-600 hover:underline mt-2 inline-block">
-          Back to Stocks
-        </Link>
+        <button
+          onClick={() => { setActiveStep(4); router.push("/"); }}
+          className="text-emerald-600 hover:underline mt-2 inline-block text-sm"
+        >
+          Back to Insights
+        </button>
       </div>
     );
   }
@@ -84,7 +90,7 @@ export default function StockDetailPage() {
   return (
     <div className="p-6 space-y-6 pb-24 lg:pb-6">
       {/* Navigation */}
-      <DetailNav backLabel="Back to Stocks" backHref="/stocks" />
+      <DetailNav backLabel="Back to Insights" backStep={4} />
 
       {/* Header */}
       <div className="flex items-center justify-between">

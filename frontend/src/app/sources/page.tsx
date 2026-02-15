@@ -112,7 +112,7 @@ export default function SourcesPage() {
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6 pb-24 lg:pb-6">
       {/* Navigation */}
-      <DetailNav backLabel="Back to Pipeline" backHref="/" />
+      <DetailNav backLabel="Back to Sources" backStep={1} />
 
       {/* Header */}
       <div className="flex items-center justify-between">

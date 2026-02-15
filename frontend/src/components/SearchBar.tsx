@@ -132,14 +132,20 @@ export default function SearchBar() {
             <div className="p-2 border-t border-gray-200">
               <p className="text-xs text-gray-400 px-2 pb-1 font-semibold uppercase">Articles</p>
               {results.articles.map((a) => (
-                <button
+                <a
                   key={a.id}
-                  onClick={() => navigate(`/news`)}
-                  className="w-full text-left px-2 py-1.5 rounded hover:bg-gray-100 transition-colors"
+                  href={a.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => { setOpen(false); setQuery(""); }}
+                  className="block w-full text-left px-2 py-1.5 rounded hover:bg-gray-100 transition-colors"
                 >
                   <p className="text-sm text-gray-700 line-clamp-1">{a.title}</p>
-                  <p className="text-xs text-gray-400">{a.source}</p>
-                </button>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-gray-400">{a.source}</p>
+                    <span className="text-xs text-blue-400">Open &rsaquo;</span>
+                  </div>
+                </a>
               ))}
             </div>
           )}
