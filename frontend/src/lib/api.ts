@@ -207,6 +207,25 @@ export interface ChatResponse {
   suggested_queries: string[];
 }
 
+// Top Picks (Insights)
+export interface TopPick {
+  ticker: string;
+  stock_name: string | null;
+  sector: string | null;
+  direction: string;
+  composite_score: number;
+  signal_confidence: number;
+  backtest_accuracy_7d: number | null;
+  sentiment_score: number;
+  signal_count: number;
+  reasoning: string | null;
+  impact_hypothesis: string | null;
+  time_horizon: string | null;
+  latest_signal_id: number;
+  current_price: number | null;
+  percent_change: number | null;
+}
+
 // Enhanced dashboard types (Phase C)
 export interface SectorHeatmapEntry {
   sector: string;
@@ -344,4 +363,15 @@ export const api = {
     fetchAPI<EnhancedDashboard>("/api/dashboard/enhanced"),
   getMarketNarrative: () =>
     fetchAPI<{ narrative: string }>("/api/dashboard/narrative"),
+
+  // Insights
+  getTopPicks: (params?: { limit?: number; min_confidence?: number; time_horizon?: string; direction?: string }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.limit) searchParams.set("limit", String(params.limit));
+    if (params?.min_confidence) searchParams.set("min_confidence", String(params.min_confidence));
+    if (params?.time_horizon) searchParams.set("time_horizon", params.time_horizon);
+    if (params?.direction) searchParams.set("direction", params.direction);
+    const qs = searchParams.toString();
+    return fetchAPI<TopPick[]>(`/api/insights/top-picks${qs ? `?${qs}` : ""}`);
+  },
 };
