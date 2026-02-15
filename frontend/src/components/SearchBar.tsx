@@ -13,7 +13,6 @@ export default function SearchBar() {
   const router = useRouter();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Debounced search
   useEffect(() => {
     if (query.length < 2) {
       setResults(null);
@@ -39,7 +38,6 @@ export default function SearchBar() {
     };
   }, [query]);
 
-  // Close on click outside
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
@@ -71,7 +69,7 @@ export default function SearchBar() {
         onChange={(e) => setQuery(e.target.value)}
         onFocus={() => results && setOpen(true)}
         placeholder="Search stocks, signals, news..."
-        className="w-48 lg:w-64 bg-slate-800 border border-slate-600 rounded-md px-3 py-1.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
+        className="w-full bg-white border border-gray-300 rounded-md px-3 py-1.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-emerald-500 transition-colors"
         onKeyDown={(e) => {
           if (e.key === "Escape") setOpen(false);
         }}
@@ -82,48 +80,47 @@ export default function SearchBar() {
         </div>
       )}
 
-      {/* Dropdown */}
       {open && results && (
-        <div className="absolute top-full mt-1 left-0 w-80 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
+        <div className="absolute top-full mt-1 left-0 w-80 bg-white border border-gray-200 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
           {!hasResults && (
-            <p className="text-sm text-slate-400 p-3">No results for &quot;{query}&quot;</p>
+            <p className="text-sm text-gray-400 p-3">No results for &quot;{query}&quot;</p>
           )}
 
           {results.stocks.length > 0 && (
             <div className="p-2">
-              <p className="text-xs text-slate-500 px-2 pb-1 font-semibold uppercase">Stocks</p>
+              <p className="text-xs text-gray-400 px-2 pb-1 font-semibold uppercase">Stocks</p>
               {results.stocks.map((s) => (
                 <button
                   key={s.id}
                   onClick={() => navigate(`/stocks/${s.ticker}`)}
-                  className="w-full text-left px-2 py-1.5 rounded hover:bg-slate-700 transition-colors"
+                  className="w-full text-left px-2 py-1.5 rounded hover:bg-gray-100 transition-colors"
                 >
-                  <span className="font-mono text-emerald-400 text-sm">{s.ticker}</span>
-                  <span className="text-slate-300 text-sm ml-2">{s.company_name}</span>
-                  {s.sector && <span className="text-xs text-slate-500 ml-2">{s.sector}</span>}
+                  <span className="font-mono text-emerald-600 text-sm">{s.ticker}</span>
+                  <span className="text-gray-700 text-sm ml-2">{s.company_name}</span>
+                  {s.sector && <span className="text-xs text-gray-400 ml-2">{s.sector}</span>}
                 </button>
               ))}
             </div>
           )}
 
           {results.signals.length > 0 && (
-            <div className="p-2 border-t border-slate-700">
-              <p className="text-xs text-slate-500 px-2 pb-1 font-semibold uppercase">Signals</p>
+            <div className="p-2 border-t border-gray-200">
+              <p className="text-xs text-gray-400 px-2 pb-1 font-semibold uppercase">Signals</p>
               {results.signals.map((s) => (
                 <button
                   key={s.id}
                   onClick={() => navigate(`/signals/${s.id}`)}
-                  className="w-full text-left px-2 py-1.5 rounded hover:bg-slate-700 transition-colors"
+                  className="w-full text-left px-2 py-1.5 rounded hover:bg-gray-100 transition-colors"
                 >
-                  <span className="font-mono text-emerald-400 text-sm">{s.stock_ticker}</span>
+                  <span className="font-mono text-emerald-600 text-sm">{s.stock_ticker}</span>
                   <span
                     className={`text-xs ml-2 ${
-                      s.direction === "up" ? "text-emerald-400" : "text-red-400"
+                      s.direction === "up" ? "text-emerald-600" : "text-red-600"
                     }`}
                   >
                     {s.direction?.toUpperCase()}
                   </span>
-                  <span className="text-xs text-slate-400 ml-2">
+                  <span className="text-xs text-gray-400 ml-2">
                     {(s.confidence * 100).toFixed(0)}%
                   </span>
                 </button>
@@ -132,32 +129,32 @@ export default function SearchBar() {
           )}
 
           {results.articles.length > 0 && (
-            <div className="p-2 border-t border-slate-700">
-              <p className="text-xs text-slate-500 px-2 pb-1 font-semibold uppercase">Articles</p>
+            <div className="p-2 border-t border-gray-200">
+              <p className="text-xs text-gray-400 px-2 pb-1 font-semibold uppercase">Articles</p>
               {results.articles.map((a) => (
                 <button
                   key={a.id}
                   onClick={() => navigate(`/news`)}
-                  className="w-full text-left px-2 py-1.5 rounded hover:bg-slate-700 transition-colors"
+                  className="w-full text-left px-2 py-1.5 rounded hover:bg-gray-100 transition-colors"
                 >
-                  <p className="text-sm text-slate-300 line-clamp-1">{a.title}</p>
-                  <p className="text-xs text-slate-500">{a.source}</p>
+                  <p className="text-sm text-gray-700 line-clamp-1">{a.title}</p>
+                  <p className="text-xs text-gray-400">{a.source}</p>
                 </button>
               ))}
             </div>
           )}
 
           {results.themes.length > 0 && (
-            <div className="p-2 border-t border-slate-700">
-              <p className="text-xs text-slate-500 px-2 pb-1 font-semibold uppercase">Themes</p>
+            <div className="p-2 border-t border-gray-200">
+              <p className="text-xs text-gray-400 px-2 pb-1 font-semibold uppercase">Themes</p>
               {results.themes.map((t) => (
                 <button
                   key={t.id}
                   onClick={() => navigate(`/themes/${t.id}`)}
-                  className="w-full text-left px-2 py-1.5 rounded hover:bg-slate-700 transition-colors"
+                  className="w-full text-left px-2 py-1.5 rounded hover:bg-gray-100 transition-colors"
                 >
-                  <p className="text-sm text-slate-300">{t.name}</p>
-                  {t.sector && <span className="text-xs text-slate-500">{t.sector}</span>}
+                  <p className="text-sm text-gray-700">{t.name}</p>
+                  {t.sector && <span className="text-xs text-gray-400">{t.sector}</span>}
                 </button>
               ))}
             </div>

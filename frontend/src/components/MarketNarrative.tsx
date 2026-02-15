@@ -28,10 +28,10 @@ export default function MarketNarrative() {
 
   if (loading) {
     return (
-      <div className="bg-gradient-to-r from-slate-900 to-slate-800 border border-slate-700 rounded-xl p-6 animate-pulse">
-        <div className="h-4 bg-slate-700 rounded w-3/4 mb-3" />
-        <div className="h-4 bg-slate-700 rounded w-full mb-3" />
-        <div className="h-4 bg-slate-700 rounded w-5/6" />
+      <div className="bg-gradient-to-r from-emerald-50 to-white border border-emerald-200 rounded-xl p-6 animate-pulse">
+        <div className="h-4 bg-gray-200 rounded w-3/4 mb-3" />
+        <div className="h-4 bg-gray-200 rounded w-full mb-3" />
+        <div className="h-4 bg-gray-200 rounded w-5/6" />
       </div>
     );
   }
@@ -39,22 +39,22 @@ export default function MarketNarrative() {
   if (!narrative) return null;
 
   return (
-    <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border border-slate-700 rounded-xl p-6 relative overflow-hidden">
+    <div className="bg-gradient-to-r from-emerald-50 via-white to-emerald-50 border border-emerald-200 rounded-xl p-6 relative overflow-hidden">
       <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -translate-y-1/2 translate-x-1/2" />
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-            <h3 className="text-sm font-semibold text-emerald-400 uppercase tracking-wide">
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+            <h3 className="text-sm font-semibold text-emerald-700 uppercase tracking-wide">
               AI Market Briefing
             </h3>
           </div>
-          <p className="text-slate-200 text-sm leading-relaxed">{narrative}</p>
+          <p className="text-gray-700 text-sm leading-relaxed">{narrative}</p>
         </div>
         <button
           onClick={() => fetchNarrative(true)}
           disabled={refreshing}
-          className="flex-none text-slate-500 hover:text-slate-300 transition-colors p-1"
+          className="flex-none text-gray-400 hover:text-gray-600 transition-colors p-1"
           title="Refresh narrative"
         >
           <svg

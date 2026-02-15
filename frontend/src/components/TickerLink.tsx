@@ -16,7 +16,7 @@ export default function TickerLink({ ticker, showSuffix = false, size = "sm" }: 
   return (
     <Link
       href={`/stocks/${encodeURIComponent(ticker)}`}
-      className={`font-mono font-semibold text-emerald-400 hover:text-emerald-300 hover:bg-emerald-400/10 rounded transition-colors ${sizeClasses[size]}`}
+      className={`font-mono font-semibold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors ${sizeClasses[size]}`}
     >
       {showSuffix ? ticker : ticker.replace(".TO", "")}
     </Link>

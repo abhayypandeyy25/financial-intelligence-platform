@@ -20,7 +20,7 @@ export default function SuggestedQueries({
           key={i}
           onClick={() => onSelect(q)}
           disabled={disabled}
-          className="text-xs bg-slate-800 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-full hover:border-emerald-500 hover:text-emerald-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+          className="text-xs bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded-full hover:border-emerald-500 hover:text-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
         >
           {q}
         </button>

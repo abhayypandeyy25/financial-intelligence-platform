@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import init_db
-from app.routers import news, signals, backtest, dashboard, themes, stocks, sentiment, stock_detail, search, chat
+from app.routers import news, signals, backtest, dashboard, themes, stocks, sentiment, stock_detail, search, chat, sources
 
 app = FastAPI(
     title="Financial Intelligence Platform",
@@ -41,6 +41,7 @@ app.include_router(sentiment.router)
 app.include_router(stock_detail.router)
 app.include_router(search.router)
 app.include_router(chat.router)
+app.include_router(sources.router)
 
 
 @app.on_event("startup")
