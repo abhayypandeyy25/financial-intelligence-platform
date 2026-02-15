@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { api, DashboardSummary } from "@/lib/api";
 import MarketNarrative from "@/components/MarketNarrative";
 import StatCard from "@/components/StatCard";
@@ -42,11 +43,15 @@ export default function SourcesPanel() {
 
   const handleIngest = async (): Promise<string> => {
     const result = await api.triggerIngestion();
-    // Refresh sources
-    const src = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/sources/status`
-    ).then((r) => r.json());
+    // Refresh sources + dashboard stats so numbers update
+    const [src, dash] = await Promise.all([
+      fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/sources/status`
+      ).then((r) => r.json()),
+      api.getDashboard().catch(() => null),
+    ]);
     setSources(src);
+    if (dash) setStats(dash);
     return `Ingested ${result.total_new} new articles from ${Object.keys(result.by_source).length} sources.`;
   };
 
@@ -189,6 +194,16 @@ export default function SourcesPanel() {
           ))}
         </div>
       )}
+
+      {/* View All Sources Link */}
+      <div className="text-center pt-2">
+        <Link
+          href="/sources"
+          className="text-sm text-emerald-600 hover:text-emerald-700 font-medium hover:underline transition-colors"
+        >
+          View Complete Sources Directory &rarr;
+        </Link>
+      </div>
 
       <ConfirmModal
         open={showIngestModal}
