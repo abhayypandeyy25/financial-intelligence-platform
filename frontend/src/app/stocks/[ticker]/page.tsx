@@ -6,6 +6,7 @@ import Link from "next/link";
 import { api, StockDetail } from "@/lib/api";
 import StatCard from "@/components/StatCard";
 import TickerLink from "@/components/TickerLink";
+import DetailNav from "@/components/DetailNav";
 import {
   LineChart,
   Line,
@@ -81,13 +82,13 @@ export default function StockDetailPage() {
   const isPositive = q && q.percent_change != null && q.percent_change >= 0;
 
   return (
-    <div className="space-y-6 pb-24 lg:pb-6">
+    <div className="p-6 space-y-6 pb-24 lg:pb-6">
+      {/* Navigation */}
+      <DetailNav backLabel="Back to Stocks" backHref="/stocks" />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <Link href="/stocks" className="text-sm text-gray-500 hover:text-emerald-600 transition-colors">
-            &larr; Back to Stocks
-          </Link>
           <h1 className="text-2xl font-bold mt-1 text-gray-900">
             <span className="font-mono text-emerald-600">{ticker}</span>
             {data.company_name && (

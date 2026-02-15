@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api, DashboardSummary } from "@/lib/api";
 import MarketNarrative from "@/components/MarketNarrative";
 import StatCard from "@/components/StatCard";
+import ConfirmModal from "@/components/ConfirmModal";
 
 interface SourceStatus {
   name: string;
@@ -21,6 +22,7 @@ export default function SourcesPanel() {
   const [stats, setStats] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [ingesting, setIngesting] = useState(false);
+  const [showIngestModal, setShowIngestModal] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -38,20 +40,14 @@ export default function SourcesPanel() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleIngest = async () => {
-    setIngesting(true);
-    try {
-      const result = await api.triggerIngestion();
-      alert(`Ingested ${result.total_new} new articles`);
-      // Refresh sources
-      const src = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/sources/status`
-      ).then((r) => r.json());
-      setSources(src);
-    } catch {
-      alert("Ingestion failed. Check if the backend is running.");
-    }
-    setIngesting(false);
+  const handleIngest = async (): Promise<string> => {
+    const result = await api.triggerIngestion();
+    // Refresh sources
+    const src = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/sources/status`
+    ).then((r) => r.json());
+    setSources(src);
+    return `Ingested ${result.total_new} new articles from ${Object.keys(result.by_source).length} sources.`;
   };
 
   const groupedSources: Record<string, SourceStatus[]> = {};
@@ -88,11 +84,10 @@ export default function SourcesPanel() {
           </p>
         </div>
         <button
-          onClick={handleIngest}
-          disabled={ingesting}
-          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-lg text-sm font-medium transition-colors"
+          onClick={() => setShowIngestModal(true)}
+          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition-colors"
         >
-          {ingesting ? "Ingesting..." : "Ingest Now"}
+          Ingest Now
         </button>
       </div>
 
@@ -194,6 +189,16 @@ export default function SourcesPanel() {
           ))}
         </div>
       )}
+
+      <ConfirmModal
+        open={showIngestModal}
+        title="Ingest News Articles"
+        description="This will scrape all configured news sources (RSS feeds, web scrapers) and import new articles into the database. This may take 30-60 seconds depending on the number of sources."
+        confirmLabel="Start Ingestion"
+        confirmColor="emerald"
+        onConfirm={handleIngest}
+        onClose={() => setShowIngestModal(false)}
+      />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api, ThemeDetail } from "@/lib/api";
 import TickerLink from "@/components/TickerLink";
+import DetailNav from "@/components/DetailNav";
 
 const SENTIMENT_COLORS: Record<string, string> = {
   positive: "bg-emerald-100 text-emerald-700",
@@ -47,13 +48,13 @@ export default function ThemeDetailPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl pb-24 lg:pb-6">
+    <div className="p-6 space-y-6 max-w-4xl pb-24 lg:pb-6">
+      {/* Navigation */}
+      <DetailNav backLabel="Back to Themes" backHref="/themes" />
+
       {/* Header */}
       <div>
-        <Link href="/themes" className="text-sm text-gray-500 hover:text-emerald-600 transition-colors">
-          &larr; Back to Themes
-        </Link>
-        <h1 className="text-2xl font-bold mt-1 text-gray-900">{data.name}</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{data.name}</h1>
         <div className="flex gap-3 mt-2 text-sm">
           {data.sector && <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-700">{data.sector}</span>}
           {data.relevance_score != null && (

@@ -17,6 +17,7 @@ import StatCard from "@/components/StatCard";
 import SectorHeatmap from "@/components/SectorHeatmap";
 import MarketNarrative from "@/components/MarketNarrative";
 import TickerLink from "@/components/TickerLink";
+import ConfirmModal from "@/components/ConfirmModal";
 import {
   BarChart,
   Bar,
@@ -123,6 +124,7 @@ export default function InsightsPanel() {
   const [searchTerm, setSearchTerm] = useState("");
   const [sectorFilter, setSectorFilter] = useState("");
   const [running, setRunning] = useState(false);
+  const [showBacktestModal, setShowBacktestModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -264,16 +266,12 @@ export default function InsightsPanel() {
   }, [posts, sentimentFilter, showAllPosts]);
 
   // Actions
-  const handleRunBacktest = async () => {
-    setRunning(true);
-    try {
-      const result = await api.runBacktest();
-      alert(`Tested ${result.signals_tested} signals, created ${result.results_created} results`);
-      const [bs, br] = await Promise.all([api.getBacktestSummary(), api.getBacktestResults()]);
-      setBacktestSummary(bs);
-      setBacktestResults(br);
-    } catch { alert("Back-test failed."); }
-    setRunning(false);
+  const handleRunBacktest = async (): Promise<string> => {
+    const result = await api.runBacktest();
+    const [bs, br] = await Promise.all([api.getBacktestSummary(), api.getBacktestResults()]);
+    setBacktestSummary(bs);
+    setBacktestResults(br);
+    return `Tested ${result.signals_tested} signals and created ${result.results_created} backtest results.`;
   };
 
   const handleRefreshStocks = async () => {
@@ -329,11 +327,10 @@ export default function InsightsPanel() {
           </p>
         </div>
         <button
-          onClick={handleRunBacktest}
-          disabled={running}
-          className="px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-lg text-sm font-medium transition-colors w-fit"
+          onClick={() => setShowBacktestModal(true)}
+          className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-sm font-medium transition-colors w-fit"
         >
-          {running ? "Running..." : "Run Back-tests"}
+          Run Back-tests
         </button>
       </div>
 
@@ -1026,6 +1023,16 @@ export default function InsightsPanel() {
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        open={showBacktestModal}
+        title="Run Back-tests"
+        description="This will validate existing signals against actual stock price movements at 1-day, 7-day, and 30-day intervals to measure prediction accuracy. Results help calibrate signal reliability."
+        confirmLabel="Run Back-tests"
+        confirmColor="amber"
+        onConfirm={handleRunBacktest}
+        onClose={() => setShowBacktestModal(false)}
+      />
     </div>
   );
 }

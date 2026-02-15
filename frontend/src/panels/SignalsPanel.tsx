@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api, Signal, Theme } from "@/lib/api";
 import TickerLink from "@/components/TickerLink";
+import ConfirmModal from "@/components/ConfirmModal";
 
 const SECTORS = ["All", "Energy", "Mining", "Finance", "Technology", "Healthcare"];
 const SENTIMENTS = ["All", "positive", "negative", "neutral"];
@@ -17,6 +18,8 @@ export default function SignalsPanel() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [detecting, setDetecting] = useState(false);
+  const [showProcessModal, setShowProcessModal] = useState(false);
+  const [showDetectModal, setShowDetectModal] = useState(false);
   const [sectorFilter, setSectorFilter] = useState("All");
   const [sentimentFilter, setSentimentFilter] = useState("All");
   const [minConfidence, setMinConfidence] = useState(0);
@@ -43,30 +46,16 @@ export default function SignalsPanel() {
     fetchData();
   }, [sectorFilter, sentimentFilter, minConfidence]);
 
-  const handleProcess = async () => {
-    setProcessing(true);
-    try {
-      const result = await api.processSignals();
-      alert(
-        `Processed ${result.articles_processed} articles, generated ${result.signals_generated} signals`
-      );
-      fetchData();
-    } catch {
-      alert("Processing failed.");
-    }
-    setProcessing(false);
+  const handleProcess = async (): Promise<string> => {
+    const result = await api.processSignals();
+    fetchData();
+    return `Processed ${result.articles_processed} articles and generated ${result.signals_generated} new signals.`;
   };
 
-  const handleDetect = async () => {
-    setDetecting(true);
-    try {
-      const result = await api.detectThemes();
-      alert(`Detected ${result.themes_detected} themes`);
-      fetchData();
-    } catch {
-      alert("Theme detection failed.");
-    }
-    setDetecting(false);
+  const handleDetect = async (): Promise<string> => {
+    const result = await api.detectThemes();
+    fetchData();
+    return `Detected ${result.themes_detected} market themes from recent articles and signals.`;
   };
 
   return (
@@ -83,18 +72,16 @@ export default function SignalsPanel() {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={handleProcess}
-            disabled={processing}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-lg text-sm font-medium transition-colors"
+            onClick={() => setShowProcessModal(true)}
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition-colors"
           >
-            {processing ? "Processing..." : "Process Articles"}
+            Process Articles
           </button>
           <button
-            onClick={handleDetect}
-            disabled={detecting}
-            className="px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-lg text-sm font-medium transition-colors"
+            onClick={() => setShowDetectModal(true)}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-medium transition-colors"
           >
-            {detecting ? "Detecting..." : "Detect Themes"}
+            Detect Themes
           </button>
         </div>
       </div>
@@ -277,6 +264,25 @@ export default function SignalsPanel() {
           )}
         </>
       )}
+
+      <ConfirmModal
+        open={showProcessModal}
+        title="Process Articles"
+        description="This will send unprocessed articles to Claude AI for analysis, extracting investment signals including ticker, direction, sentiment, and confidence score. Each article uses approximately 1 API call."
+        confirmLabel="Start Processing"
+        confirmColor="emerald"
+        onConfirm={handleProcess}
+        onClose={() => setShowProcessModal(false)}
+      />
+      <ConfirmModal
+        open={showDetectModal}
+        title="Detect Market Themes"
+        description="This will analyze recent signals and articles to identify emerging market themes and trends using AI clustering. Themes group related articles and signals by topic, sector, and relevance."
+        confirmLabel="Detect Themes"
+        confirmColor="purple"
+        onConfirm={handleDetect}
+        onClose={() => setShowDetectModal(false)}
+      />
 
       {tab === "themes" && (
         <>

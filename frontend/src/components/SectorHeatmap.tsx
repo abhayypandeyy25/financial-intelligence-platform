@@ -46,7 +46,7 @@ export default function SectorHeatmap({ sectors }: SectorHeatmapProps) {
         {sectors.map((s) => (
           <Link
             key={s.sector}
-            href={`/stocks?sector=${encodeURIComponent(s.sector)}`}
+            href={`/sectors/${encodeURIComponent(s.sector)}`}
             className={`rounded-lg border p-4 transition-all hover:scale-[1.02] ${getSentimentColor(
               s.avg_sentiment_score
             )}`}

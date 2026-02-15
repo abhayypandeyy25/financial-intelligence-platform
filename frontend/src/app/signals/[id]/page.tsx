@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api, SignalDetail } from "@/lib/api";
 import TickerLink from "@/components/TickerLink";
+import DetailNav from "@/components/DetailNav";
 
 const SENTIMENT_COLORS: Record<string, string> = {
   positive: "bg-emerald-100 text-emerald-700 border-emerald-200",
@@ -39,7 +40,7 @@ export default function SignalDetailPage() {
     return (
       <div className="text-center py-12">
         <p className="text-red-600">{error || "Signal not found"}</p>
-        <Link href="/signals" className="text-emerald-600 hover:underline mt-2 inline-block">
+        <Link href="/signals" className="text-emerald-600 hover:underline mt-2 inline-block text-sm">
           Back to Signals
         </Link>
       </div>
@@ -47,13 +48,13 @@ export default function SignalDetailPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl pb-24 lg:pb-6">
+    <div className="p-6 space-y-6 max-w-4xl pb-24 lg:pb-6">
+      {/* Navigation */}
+      <DetailNav backLabel="Back to Signals" backHref="/signals" />
+
       {/* Header */}
       <div>
-        <Link href="/signals" className="text-sm text-gray-500 hover:text-emerald-600 transition-colors">
-          &larr; Back to Signals
-        </Link>
-        <h1 className="text-2xl font-bold mt-1 text-gray-900">Signal #{data.id}</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Signal #{data.id}</h1>
       </div>
 
       {/* Signal Card */}
