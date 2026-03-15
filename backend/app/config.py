@@ -159,6 +159,13 @@ class Settings(BaseSettings):
     top_100_criteria: str = "market_cap"
     top_100_refresh_hours: int = 24
 
+    # MiroFish sidecar configuration
+    mirofish_url: str = "http://localhost:5001"
+    mirofish_timeout: int = 120
+    zep_api_key: str = ""
+    simulation_default_max_rounds: int = 15
+    consensus_agent_count: int = 5
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 

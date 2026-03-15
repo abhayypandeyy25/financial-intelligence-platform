@@ -4,7 +4,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import init_db
-from app.routers import news, signals, backtest, dashboard, themes, stocks, sentiment, stock_detail, search, chat, sources, insights
+from app.routers import (
+    news, signals, backtest, dashboard, themes, stocks, sentiment,
+    stock_detail, search, chat, sources, insights,
+    consensus, scenarios, knowledge_graph, reports,
+)
 
 app = FastAPI(
     title="Financial Intelligence Platform",
@@ -44,6 +48,12 @@ app.include_router(chat.router)
 app.include_router(sources.router)
 app.include_router(insights.router)
 
+# MiroFish integration routers
+app.include_router(consensus.router)
+app.include_router(scenarios.router)
+app.include_router(knowledge_graph.router)
+app.include_router(reports.router)
+
 
 @app.on_event("startup")
 def startup():
@@ -72,6 +82,20 @@ def startup():
     # Start background scheduler for periodic ingestion
     from app.services.scheduler import start_scheduler
     start_scheduler()
+
+    # Check MiroFish sidecar availability
+    import asyncio
+    from app.services.mirofish_client import MiroFishClient
+    async def _check_mirofish():
+        client = MiroFishClient()
+        if await client.health_check():
+            print("Startup: MiroFish sidecar connected at", client.base_url)
+        else:
+            print(f"Startup: MiroFish sidecar not available at {client.base_url} (simulation features disabled)")
+    try:
+        asyncio.get_event_loop().run_until_complete(_check_mirofish())
+    except Exception:
+        print("Startup: MiroFish health check skipped")
 
 
 @app.on_event("shutdown")

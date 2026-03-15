@@ -253,6 +253,97 @@ export interface EnhancedDashboard extends DashboardSummary {
   pipeline_stats: PipelineStats;
 }
 
+// ──────────────────────────────────────────────────────────────
+// MiroFish Integration Types
+// ──────────────────────────────────────────────────────────────
+
+export interface GraphNode {
+  uuid: string;
+  name: string;
+  labels?: string[];
+  summary?: string;
+  attributes?: Record<string, string>;
+  created_at?: string;
+  financial_data?: { current_price?: number; percent_change?: number; volume?: number };
+  signal_data?: { total: number; positive: number; negative: number };
+  sector?: string;
+}
+
+export interface GraphEdge {
+  uuid: string;
+  name: string;
+  fact?: string;
+  fact_type?: string;
+  source_node_uuid: string;
+  target_node_uuid: string;
+  source_name?: string;
+  target_name?: string;
+  created_at?: string;
+  episodes?: string[];
+}
+
+export interface GraphData {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  node_count: number;
+  edge_count: number;
+  graph_id?: string;
+  built_at?: string;
+  status?: string;
+  message?: string;
+}
+
+export interface ConsensusResult {
+  id: number;
+  signal_id: number;
+  consensus_score: number;
+  agreement_ratio: number;
+  bull_count: number;
+  bear_count: number;
+  neutral_count: number;
+  debate_summary: string | null;
+  key_arguments_bull: string[];
+  key_arguments_bear: string[];
+  created_at: string | null;
+}
+
+export interface ScenarioImpact {
+  id: number;
+  ticker: string;
+  predicted_direction: string | null;
+  predicted_magnitude: number | null;
+  confidence: number | null;
+  sentiment_shift: number | null;
+  reasoning: string | null;
+}
+
+export interface ScenarioHistory {
+  id: number;
+  scenario_description: string | null;
+  status: string;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string | null;
+  impact_count: number;
+}
+
+export interface TaskStatus {
+  status: string;
+  progress: number;
+  message: string;
+  error?: string;
+  [key: string]: unknown;
+}
+
+export interface ReportListItem {
+  id: number;
+  simulation_type: string;
+  report_id: string | null;
+  scenario_description: string | null;
+  status: string;
+  completed_at: string | null;
+}
+
 // API functions
 export const api = {
   // Dashboard
@@ -374,4 +465,68 @@ export const api = {
     const qs = searchParams.toString();
     return fetchAPI<TopPick[]>(`/api/insights/top-picks${qs ? `?${qs}` : ""}`);
   },
+
+  // ── Knowledge Graph ──────────────────────────────────────
+  buildKnowledgeGraph: () =>
+    fetchAPI<{ task_id: string; status: string }>("/api/knowledge-graph/build", { method: "POST" }),
+  getKGBuildStatus: (taskId?: string) =>
+    fetchAPI<TaskStatus>(taskId ? `/api/knowledge-graph/status/${taskId}` : "/api/knowledge-graph/status"),
+  getGraphData: (params?: { sector?: string; ticker?: string }) => {
+    const sp = new URLSearchParams();
+    if (params?.sector) sp.set("sector", params.sector);
+    if (params?.ticker) sp.set("ticker", params.ticker);
+    const qs = sp.toString();
+    return fetchAPI<GraphData>(`/api/knowledge-graph/data${qs ? `?${qs}` : ""}`);
+  },
+  searchGraph: (q: string) =>
+    fetchAPI<{ results: GraphNode[] }>(`/api/knowledge-graph/search?q=${encodeURIComponent(q)}`),
+
+  // ── Consensus ────────────────────────────────────────────
+  runConsensus: (signalId: number) =>
+    fetchAPI<{ task_id: string; status: string }>("/api/consensus/run", {
+      method: "POST",
+      body: JSON.stringify({ signal_id: signalId }),
+    }),
+  getConsensusStatus: (taskId: string) =>
+    fetchAPI<TaskStatus>(`/api/consensus/status/${taskId}`),
+  getConsensus: (signalId: number) =>
+    fetchAPI<ConsensusResult>(`/api/consensus/${signalId}`),
+
+  // ── Scenarios ────────────────────────────────────────────
+  runScenario: (scenarioText: string, targetTickers?: string[], sectors?: string[], maxRounds?: number) =>
+    fetchAPI<{ task_id: string; status: string }>("/api/scenarios/run", {
+      method: "POST",
+      body: JSON.stringify({
+        scenario_text: scenarioText,
+        target_tickers: targetTickers,
+        sectors,
+        max_rounds: maxRounds || 15,
+      }),
+    }),
+  getScenarioStatus: (taskId: string) =>
+    fetchAPI<TaskStatus>(`/api/scenarios/status/${taskId}`),
+  getScenarioHistory: (limit?: number) =>
+    fetchAPI<ScenarioHistory[]>(`/api/scenarios/history${limit ? `?limit=${limit}` : ""}`),
+  getScenario: (id: number) =>
+    fetchAPI<Record<string, unknown>>(`/api/scenarios/${id}`),
+  getScenarioImpacts: (id: number) =>
+    fetchAPI<ScenarioImpact[]>(`/api/scenarios/${id}/impacts`),
+
+  // ── Reports ──────────────────────────────────────────────
+  generateReport: (simulationId: number) =>
+    fetchAPI<{ status: string; report_id: string }>("/api/reports/generate", {
+      method: "POST",
+      body: JSON.stringify({ simulation_id: simulationId }),
+    }),
+  getReport: (reportId: string) =>
+    fetchAPI<Record<string, unknown>>(`/api/reports/${reportId}`),
+  getReportProgress: (reportId: string) =>
+    fetchAPI<TaskStatus>(`/api/reports/${reportId}/progress`),
+  listReports: (limit?: number) =>
+    fetchAPI<ReportListItem[]>(`/api/reports/list${limit ? `?limit=${limit}` : ""}`),
+  chatWithReport: (reportId: string, message: string, history?: Array<{ role: string; content: string }>) =>
+    fetchAPI<{ response: string }>("/api/reports/chat", {
+      method: "POST",
+      body: JSON.stringify({ report_id: reportId, message, history }),
+    }),
 };

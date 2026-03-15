@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { api, SignalDetail } from "@/lib/api";
+import { api, SignalDetail, ConsensusResult } from "@/lib/api";
 import { useStep } from "@/context/StepContext";
 import TickerLink from "@/components/TickerLink";
 import DetailNav from "@/components/DetailNav";
+import ConsensusGauge from "@/components/ConsensusGauge";
+import DebateSummary from "@/components/DebateSummary";
 
 const SENTIMENT_COLORS: Record<string, string> = {
   positive: "bg-emerald-100 text-emerald-700 border-emerald-200",
@@ -22,6 +24,11 @@ export default function SignalDetailPage() {
   const [data, setData] = useState<SignalDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [consensus, setConsensus] = useState<ConsensusResult | null>(null);
+  const [consensusLoading, setConsensusLoading] = useState(false);
+  const [consensusTaskId, setConsensusTaskId] = useState<string | null>(null);
+  const [consensusProgress, setConsensusProgress] = useState(0);
+  const [consensusMessage, setConsensusMessage] = useState("");
 
   useEffect(() => {
     api
@@ -29,7 +36,50 @@ export default function SignalDetailPage() {
       .then(setData)
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
+
+    // Try to load existing consensus
+    api.getConsensus(signalId).then(setConsensus).catch(() => {});
   }, [signalId]);
+
+  // Poll consensus task
+  useEffect(() => {
+    if (!consensusTaskId) return;
+    const interval = setInterval(async () => {
+      try {
+        const status = await api.getConsensusStatus(consensusTaskId);
+        setConsensusProgress(status.progress);
+        setConsensusMessage(status.message);
+        if (status.status === "completed") {
+          setConsensusLoading(false);
+          setConsensusTaskId(null);
+          api.getConsensus(signalId).then(setConsensus).catch(() => {});
+        } else if (status.status === "failed") {
+          setConsensusLoading(false);
+          setConsensusTaskId(null);
+          setConsensusMessage(`Failed: ${status.error || status.message}`);
+        }
+      } catch { /* ignore */ }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [consensusTaskId, signalId]);
+
+  const runConsensus = async () => {
+    try {
+      setConsensusLoading(true);
+      setConsensusProgress(0);
+      setConsensusMessage("Starting...");
+      const result = await api.runConsensus(signalId);
+      if (result.status === "exists") {
+        api.getConsensus(signalId).then(setConsensus).catch(() => {});
+        setConsensusLoading(false);
+      } else {
+        setConsensusTaskId(result.task_id);
+      }
+    } catch (e) {
+      setConsensusLoading(false);
+      setConsensusMessage(e instanceof Error ? e.message : "Error");
+    }
+  };
 
   if (loading) {
     return (
@@ -113,6 +163,65 @@ export default function SignalDetailPage() {
           <div>
             <span className="text-gray-400 text-sm">Impact Hypothesis</span>
             <p className="text-gray-800 mt-1">{data.impact_hypothesis}</p>
+          </div>
+        )}
+      </div>
+
+      {/* AI Consensus Analysis */}
+      <div className="bg-white rounded-lg p-6 border border-gray-200">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-lg">🤖</span>
+          <h2 className="text-lg font-semibold text-gray-900">AI Consensus Analysis</h2>
+        </div>
+
+        {consensus ? (
+          <div className="space-y-4">
+            <div className="flex items-start gap-6">
+              <ConsensusGauge score={consensus.consensus_score} />
+              <div className="flex-1 space-y-2">
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium text-gray-900">Agreement:</span>{" "}
+                  {consensus.agreement_ratio != null
+                    ? `${(consensus.agreement_ratio * 100).toFixed(0)}%`
+                    : "—"}{" "}
+                  ({consensus.bull_count + consensus.bear_count + consensus.neutral_count} agents)
+                </div>
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium text-gray-900">Consensus Score:</span>{" "}
+                  {consensus.consensus_score > 0 ? "+" : ""}
+                  {consensus.consensus_score.toFixed(2)}
+                </div>
+              </div>
+            </div>
+            <DebateSummary consensus={consensus} />
+          </div>
+        ) : consensusLoading ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="flex-1 bg-purple-100 rounded-full h-2">
+                <div
+                  className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${consensusProgress}%` }}
+                />
+              </div>
+              <span className="text-xs text-purple-600 font-medium">{consensusProgress}%</span>
+            </div>
+            <p className="text-xs text-purple-600">{consensusMessage}</p>
+          </div>
+        ) : (
+          <div className="text-center py-4">
+            <p className="text-sm text-gray-500 mb-3">
+              No consensus analysis yet. Run multi-agent debate to validate this signal.
+            </p>
+            <button
+              onClick={runConsensus}
+              className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              🤖 Run AI Consensus
+            </button>
+            {consensusMessage && !consensusLoading && (
+              <p className="text-xs text-red-500 mt-2">{consensusMessage}</p>
+            )}
           </div>
         )}
       </div>

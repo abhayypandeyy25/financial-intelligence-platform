@@ -172,3 +172,105 @@ class Top100Stock(Base):
 
     # Selection criteria note
     selection_criteria = Column(String(100), nullable=True)  # "market_cap", "volume", etc.
+
+
+# ──────────────────────────────────────────────────────────────
+# MiroFish Integration Models
+# ──────────────────────────────────────────────────────────────
+
+class SimulationProject(Base):
+    """Tracks MiroFish projects created from financial data."""
+    __tablename__ = "simulation_projects"
+
+    id = Column(Integer, primary_key=True, index=True)
+    mirofish_project_id = Column(String(50), unique=True, nullable=False)
+    name = Column(String(200), nullable=False)
+    description = Column(Text, nullable=True)
+    project_type = Column(String(50), nullable=False)  # consensus, scenario, predictive_sentiment
+    status = Column(String(30), nullable=False, default="created")
+    graph_id = Column(String(100), nullable=True)
+    ontology_json = Column(Text, nullable=True)
+    source_article_ids = Column(Text, nullable=True)  # JSON array
+    source_signal_ids = Column(Text, nullable=True)  # JSON array
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    error = Column(Text, nullable=True)
+
+    simulations = relationship("Simulation", back_populates="project")
+
+
+class Simulation(Base):
+    """Tracks individual simulation runs."""
+    __tablename__ = "simulations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("simulation_projects.id"), nullable=False)
+    mirofish_simulation_id = Column(String(50), unique=True, nullable=False)
+    simulation_type = Column(String(50), nullable=False)  # signal_consensus, scenario, predictive_sentiment
+    status = Column(String(30), nullable=False, default="created")
+    config_json = Column(Text, nullable=True)
+    scenario_description = Column(Text, nullable=True)
+    result_summary = Column(Text, nullable=True)
+    report_id = Column(String(100), nullable=True)
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    project = relationship("SimulationProject", back_populates="simulations")
+    consensus_results = relationship("ConsensusResult", back_populates="simulation")
+    scenario_impacts = relationship("ScenarioImpact", back_populates="simulation")
+
+
+class ConsensusResult(Base):
+    """Stores consensus scores from signal debate simulations."""
+    __tablename__ = "consensus_results"
+
+    id = Column(Integer, primary_key=True, index=True)
+    simulation_id = Column(Integer, ForeignKey("simulations.id"), nullable=False)
+    signal_id = Column(Integer, ForeignKey("signals.id"), nullable=False)
+    consensus_score = Column(Float, nullable=False)  # -1.0 (bear) to 1.0 (bull)
+    agreement_ratio = Column(Float, nullable=True)
+    bull_count = Column(Integer, default=0)
+    bear_count = Column(Integer, default=0)
+    neutral_count = Column(Integer, default=0)
+    debate_summary = Column(Text, nullable=True)
+    key_arguments_bull = Column(Text, nullable=True)  # JSON array
+    key_arguments_bear = Column(Text, nullable=True)  # JSON array
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    simulation = relationship("Simulation", back_populates="consensus_results")
+    signal = relationship("Signal")
+
+
+class ScenarioImpact(Base):
+    """Stores predicted impacts from scenario simulations."""
+    __tablename__ = "scenario_impacts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    simulation_id = Column(Integer, ForeignKey("simulations.id"), nullable=False)
+    ticker = Column(String(20), nullable=False, index=True)
+    predicted_direction = Column(String(10), nullable=True)  # up, down, neutral
+    predicted_magnitude = Column(Float, nullable=True)  # percentage
+    confidence = Column(Float, nullable=True)
+    agent_reactions = Column(Text, nullable=True)  # JSON array
+    sentiment_shift = Column(Float, nullable=True)
+    reasoning = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    simulation = relationship("Simulation", back_populates="scenario_impacts")
+
+
+class KnowledgeGraphSnapshot(Base):
+    """Cached knowledge graph data for the explorer."""
+    __tablename__ = "knowledge_graph_snapshots"
+
+    id = Column(Integer, primary_key=True, index=True)
+    graph_id = Column(String(100), nullable=False, index=True)
+    snapshot_type = Column(String(30), nullable=False)  # full, sector, ticker
+    filter_value = Column(String(50), nullable=True)
+    nodes_json = Column(Text, nullable=False)
+    edges_json = Column(Text, nullable=False)
+    node_count = Column(Integer, default=0)
+    edge_count = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=True)

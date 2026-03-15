@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { useStep, Step } from "@/context/StepContext";
 import { api, DashboardSummary } from "@/lib/api";
 import SearchBar from "./SearchBar";
@@ -53,9 +55,43 @@ const steps: {
   },
 ];
 
+const simulationLinks = [
+  {
+    href: "/knowledge-graph",
+    title: "Knowledge Graph",
+    subtitle: "Entity Explorer",
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+      </svg>
+    ),
+  },
+  {
+    href: "/scenarios",
+    title: "Scenarios",
+    subtitle: "What-If Simulator",
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zM12 2.25V4.5m5.834.166l-1.591 1.591M20.25 10.5H18M7.757 14.743l-1.59 1.59M6 10.5H3.75m4.007-4.243l-1.59-1.59" />
+      </svg>
+    ),
+  },
+  {
+    href: "/reports",
+    title: "Reports",
+    subtitle: "AI Analysis",
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+      </svg>
+    ),
+  },
+];
+
 export default function PipelineJourney() {
   const { activeStep, setActiveStep } = useStep();
   const [stats, setStats] = useState<DashboardSummary | null>(null);
+  const pathname = usePathname();
 
   useEffect(() => {
     api.getDashboard().then(setStats).catch(() => {});
@@ -175,10 +211,55 @@ export default function PipelineJourney() {
           </div>
         </div>
 
+        {/* AI Simulation Section */}
+        <div className="px-4 pb-4">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-1">
+            AI Simulation
+          </p>
+          <div className="space-y-1">
+            {simulationLinks.map((link) => {
+              const isActive = pathname === link.href;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`w-full flex items-start gap-3 rounded-xl p-3 transition-all duration-200 ${
+                    isActive
+                      ? "bg-purple-50 border border-purple-200 shadow-sm"
+                      : "hover:bg-gray-100 border border-transparent"
+                  }`}
+                >
+                  <div
+                    className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                      isActive
+                        ? "bg-purple-600 text-white"
+                        : "bg-gray-200 text-gray-500"
+                    }`}
+                  >
+                    {link.icon}
+                  </div>
+                  <div className="min-w-0">
+                    <p
+                      className={`text-sm font-medium ${
+                        isActive ? "text-purple-700" : "text-gray-700"
+                      }`}
+                    >
+                      {link.title}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {link.subtitle}
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Footer */}
         <div className="p-4 border-t border-gray-200">
           <p className="text-xs text-gray-400 text-center">
-            Financial Intelligence Platform v1.0
+            Financial Intelligence Platform v2.0
           </p>
         </div>
       </aside>
