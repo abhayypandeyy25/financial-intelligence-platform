@@ -1,12 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { api, ScenarioHistory, ScenarioImpact, Top100Stock } from "@/lib/api";
 
 const SECTORS = ["Energy", "Mining", "Finance", "Technology", "Healthcare"];
 
 export default function ScenariosPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-2 border-gray-200 border-t-purple-600 rounded-full animate-spin" /></div>}>
+      <ScenariosContent />
+    </Suspense>
+  );
+}
+
+function ScenariosContent() {
   const searchParams = useSearchParams();
   const [scenarioText, setScenarioText] = useState("");
   const [selectedTickers, setSelectedTickers] = useState<string[]>([]);

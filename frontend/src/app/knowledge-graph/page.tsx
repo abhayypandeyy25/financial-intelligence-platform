@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ForceGraph from "@/components/ForceGraph";
 import { api, GraphData, GraphNode } from "@/lib/api";
@@ -8,6 +8,14 @@ import { api, GraphData, GraphNode } from "@/lib/api";
 type ViewMode = "graph" | "split" | "list";
 
 export default function KnowledgeGraphPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-8 h-8 border-2 border-gray-200 border-t-purple-600 rounded-full animate-spin" /></div>}>
+      <KnowledgeGraphContent />
+    </Suspense>
+  );
+}
+
+function KnowledgeGraphContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [graphData, setGraphData] = useState<GraphData | null>(null);
