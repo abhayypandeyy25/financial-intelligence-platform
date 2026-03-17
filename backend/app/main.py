@@ -83,17 +83,19 @@ def startup():
     from app.services.scheduler import start_scheduler
     start_scheduler()
 
-    # Check MiroFish sidecar availability
-    import asyncio
-    from app.services.mirofish_client import MiroFishClient
-    async def _check_mirofish():
-        client = MiroFishClient()
-        if await client.health_check():
-            print("Startup: MiroFish sidecar connected at", client.base_url)
-        else:
-            print(f"Startup: MiroFish sidecar not available at {client.base_url} (simulation features disabled)")
+    # Check MiroFish sidecar availability (non-blocking)
     try:
-        asyncio.get_event_loop().run_until_complete(_check_mirofish())
+        from app.services.mirofish_client import MiroFishClient
+        import httpx
+        client = MiroFishClient()
+        try:
+            resp = httpx.get(f"{client.base_url}/health", timeout=3)
+            if resp.status_code == 200:
+                print("Startup: MiroFish sidecar connected at", client.base_url)
+            else:
+                print(f"Startup: MiroFish sidecar not available at {client.base_url} (simulation features disabled)")
+        except Exception:
+            print(f"Startup: MiroFish sidecar not available at {client.base_url} (simulation features disabled)")
     except Exception:
         print("Startup: MiroFish health check skipped")
 
